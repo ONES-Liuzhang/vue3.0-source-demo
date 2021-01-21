@@ -7,20 +7,26 @@ class MyComponent {
 			"div",
 			{
 				class: "box",
-				style: { background: "red" },
+				style: { background: "green" },
 			},
+			fragmentVNode,
 			"我是box"
 		);
 	}
 }
 
-let portalVnode = h(
+let portalVNode = h(
 	Portal,
 	{
 		target: "#portal-box",
 	},
 	[h("span", null, "portal1"), h("span", null, "portal2"), "portal3"]
 );
+
+let fragmentVNode = h(Fragment, null, [
+	h("span", null, "fragment1"),
+	h("span", null, "fragment2"),
+]);
 
 let main = h(
 	"div",
@@ -32,8 +38,10 @@ let main = h(
 		h("span", null, "我是span1"),
 		h("span", null, "我是span2"),
 		"文本",
-		portalVnode,
+		portalVNode,
 	]
 );
 
 render(main, document.getElementById("app"));
+
+render(h(MyComponent), document.getElementById("component-app"));

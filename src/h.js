@@ -17,11 +17,12 @@ export function h(tag, data = null, children = null) {
 			flags = tag.functional
 				? VNodeFlags.COMPONENT_FUNCTIONAL // 函数式组件
 				: VNodeFlags.COMPONENT_STATEFUL_NORMAL; // 有状态组件
-		} else if (typeof tag === "funciton") {
+		} else if (typeof tag === "function") {
 			// vue3 类组件
-			flags = tag.prototype.render
-				? VNodeFlags.COMPONENT_STATEFUL_NORMAL // 有状态组件
-				: VNodeFlags.COMPONENT_FUNCTIONAL; // 函数式组件
+			flags =
+				tag.prototype && tag.prototype.render
+					? VNodeFlags.COMPONENT_STATEFUL_NORMAL // 有状态组件
+					: VNodeFlags.COMPONENT_FUNCTIONAL; // 函数式组件
 		}
 	}
 
