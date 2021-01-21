@@ -5,7 +5,6 @@ const port = 3000;
 const path = require("path");
 // 提供静态文件
 app.use(express.static(path.join(__dirname, "../")));
-// app.use(express.static(path.join(__dirname, "../src")));
 
 const server = http.createServer(app);
 
