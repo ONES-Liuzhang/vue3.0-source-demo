@@ -65,17 +65,24 @@ function createTextVNode(text) {
 		children: text,
 		childrenFlags: VNodeFlags.NO_CHILDREN,
 		data: null,
-		el,
+		el: null,
 	};
 }
 
+// TODO child为数组的情况，要打散数组； 当出现连续两项均为text时，要进行合并处理
 function normalizedChildren(children) {
 	let newChildren = [];
 	for (let i = 0; i < children.length; i++) {
-		const child = children[i];
-		if (child.key === null) {
+		let child = children[i];
+		if (child._isVNode) {
+			if (child.key === null) {
+				child.key = "|" + i;
+			}
+		} else {
+			child = createTextVNode(child);
 			child.key = "|" + i;
 		}
+
 		newChildren.push(child);
 	}
 	return newChildren;

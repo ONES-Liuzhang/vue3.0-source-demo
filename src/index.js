@@ -14,5 +14,12 @@ class MyComponent {
 	}
 }
 
-let vnode = h(MyComponent);
+let vnode = h(
+	"div",
+	{
+		style: { background: "red" },
+		class: "cls",
+	},
+	[h("span", null, "我是span1"), h("span", null, "我是span2"), "文本"]
+);
 render(vnode, document.getElementById("app"));
