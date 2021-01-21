@@ -1,4 +1,5 @@
 import { VNodeFlags, ChildrenFlags } from "./flags.js";
+import { createTextVNode } from "./h.js";
 
 export function render(vnode, container) {
 	let preVnode = container.vnode;
@@ -23,9 +24,58 @@ function mount(vnode, container, isSVG) {
 	}
 }
 
-function mountPortal(vnode, container) {}
+// portal会将其children挂载到vnode.tag指向的元素
+function mountPortal(vnode, container) {
+	const { tag, children, childrenFlags } = vnode;
+	const target = typeof tag === "string" ? document.querySelector(tag) : tag;
 
-function mountFragment(vnode, container) {}
+	if (target == null) {
+		console.warn("页面上找不到元素, ", target);
+		return;
+	}
+
+	switch (childrenFlags) {
+		case ChildrenFlags.SINGLE_VNODE:
+			mount(children, target);
+			break;
+		case ChildrenFlags.NO_CHILDREN:
+			const placeholder = createTextVNode("");
+			mountText(placeholder, target);
+			break;
+		default:
+			for (let i = 0; i < children.length; i++) {
+				mount(children[i], target);
+			}
+			break;
+	}
+
+	// TODO 搞清楚为什么要挂载一个占位节点到container
+	const placeholder = createTextVNode("");
+	mount(placeholder, container);
+	vnode.el = placeholder;
+}
+
+// fragment的el指向第一个元素
+function mountFragment(vnode, container) {
+	const { children, childrenFlags } = vnode;
+	switch (childrenFlags) {
+		case ChildrenFlags.SINGLE_VNODE:
+			mount(children, container);
+			vnode.el = children.el;
+			break;
+		case ChildrenFlags.NO_CHILDREN:
+			const placeholder = createTextVNode("");
+			mountText(placeholder, container);
+			vnode.el = placeholder.el;
+			break;
+		default:
+			for (let i = 0; i < children.length; i++) {
+				mount(children[i], container);
+			}
+			vnode.el = children[0].el;
+			break;
+	}
+}
 
 function mountComponent(vnode, container) {
 	const { flags } = vnode;
@@ -47,7 +97,7 @@ function mountFunctionalComponent(vnode, container) {}
 
 // mount函数最终会收敛到mountElement
 function mountElement(vnode, container, isSVG) {
-	const { tag, children, data } = vnode;
+	const { tag, children, data, childrenFlags } = vnode;
 	isSVG = isSVG || tag === "svg";
 	let el = isSVG ? document.createElementNS(tag) : document.createElement(tag);
 
@@ -67,13 +117,17 @@ function mountElement(vnode, container, isSVG) {
 		}
 	}
 
-	if (children !== null) {
-		for (let i = 0; i < children.length; i++) {
-			const child = children[i];
-			// 挂载child
-			mount(child, el, isSVG);
+	if (childrenFlags !== ChildrenFlags.NO_CHILDREN) {
+		if (childrenFlags & ChildrenFlags.SINGLE_VNODE) {
+			mount(children, el, isSVG);
+		} else if (childrenFlags & ChildrenFlags.MULTI_VNODES) {
+			for (let i = 0; i < children.length; i++) {
+				const child = children[i];
+				mount(child, el, isSVG);
+			}
 		}
 	}
+
 	vnode.el = el;
 	container.appendChild(el);
 }

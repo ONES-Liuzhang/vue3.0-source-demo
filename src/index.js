@@ -1,4 +1,4 @@
-import { h } from "./h.js";
+import { h, Portal, Fragment } from "./h.js";
 import { render } from "./render.js";
 
 class MyComponent {
@@ -14,12 +14,26 @@ class MyComponent {
 	}
 }
 
-let vnode = h(
+let portalVnode = h(
+	Portal,
+	{
+		target: "#portal-box",
+	},
+	[h("span", null, "portal1"), h("span", null, "portal2"), "portal3"]
+);
+
+let main = h(
 	"div",
 	{
 		style: { background: "red" },
 		class: "cls",
 	},
-	[h("span", null, "我是span1"), h("span", null, "我是span2"), "文本"]
+	[
+		h("span", null, "我是span1"),
+		h("span", null, "我是span2"),
+		"文本",
+		portalVnode,
+	]
 );
-render(vnode, document.getElementById("app"));
+
+render(main, document.getElementById("app"));

@@ -6,6 +6,7 @@ export function h(tag, data = null, children = null) {
 	let flags = null;
 	if (tag === Portal) {
 		flags = VNodeFlags.PORTAL;
+		tag = data && data.target;
 	} else if (tag === Fragment) {
 		flags = VNodeFlags.FRAGMENT;
 	} else if (typeof tag === "string") {
@@ -31,6 +32,7 @@ export function h(tag, data = null, children = null) {
 		if (length === 0) {
 			childrenFlags = ChildrenFlags.NO_CHILDREN;
 		} else if (length === 1) {
+			children = children[0];
 			childrenFlags = ChildrenFlags.SINGLE_VNODE;
 		} else {
 			childrenFlags = ChildrenFlags.KEYED_VNODES;
@@ -39,9 +41,9 @@ export function h(tag, data = null, children = null) {
 	} else if (children === null) {
 		childrenFlags = ChildrenFlags.NO_CHILDREN;
 	} else if (children._isVNode) {
-		children = [children];
+		childrenFlags = ChildrenFlags.SINGLE_VNODE;
 	} else {
-		children = [createTextVNode(children + "")];
+		children = createTextVNode(children + "");
 		childrenFlags = ChildrenFlags.SINGLE_VNODE;
 	}
 
@@ -56,7 +58,7 @@ export function h(tag, data = null, children = null) {
 	};
 }
 
-function createTextVNode(text) {
+export function createTextVNode(text) {
 	return {
 		_isVNode: true,
 		tag: null,
