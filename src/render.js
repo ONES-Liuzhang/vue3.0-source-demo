@@ -1,11 +1,95 @@
 import { VNodeFlags, ChildrenFlags } from "./flags.js";
 import { createTextVNode } from "./h.js";
 const domPropsRE = /\[A-Z]|^(?:value|checked|selected|muted)$/;
+
 export function render(vnode, container) {
-	let preVnode = container.vnode;
-	if (preVnode == null) {
-		mount(vnode, container);
-		container.vnode = vnode;
+	let prevVnode = container.vnode;
+	if (prevVnode == null) {
+		if (vnode) {
+			// 初始化挂载
+			mount(vnode, container);
+			container.vnode = vnode;
+		}
+	} else if (vnode == null) {
+		// prevVnode存在，vnode为空，移除dom
+		const prevEl = prevVnode.el;
+		container.removeChild(prevEl);
+		container.vnode = null;
+	} else {
+		if (prevVnode !== vnode) {
+			patch(prevVnode, vnode, container);
+			container.vnode = vnode;
+		}
+	}
+}
+
+function patch(prevVnode, vnode, container) {
+	const prevVnodeFlags = prevVnode.flags;
+	const vnodeFlags = vnode.flags;
+	if (!(prevVnodeFlags & vnodeFlags)) {
+		// 标签类型不同直接替换
+		// 优化：如果chilren相同，可以裁枝
+		replaceVNode(prevVnode, vnode, container);
+	} else if (vnodeFlags & VNodeFlags.ELEMENT) {
+		patchElement(prevVnode, vnode, container);
+	} else if (vnodeFlags & VNodeFlags.FRAGMENT) {
+		patchFragment(prevVnode, vnode, container);
+	} else if (flags & VNodeFlags.PORTAL) {
+		patchPortal(vnode, container);
+	} else if (flags & VNodeFlags.COMPONENT) {
+		patchComponent(vnode, container);
+	} else {
+		patchText(vnode, container);
+	}
+}
+
+function replaceVNode(prevNode, vnode, container) {
+	container.removeChild(prevNode.el);
+	mount(vnode, container);
+}
+
+function patchElement(prevVnode, vnode, container) {
+	if (prevVnode.tag !== vnode.tag) {
+		replaceVNode(prevVnode, vnode, container);
+		return;
+	}
+	const el = (vnode.el = prevVnode.el);
+	const prevData = prevVnode.data;
+	const nextData = vnode.data;
+
+	if (nextData) {
+		// 更新nextData中有的key对应的值
+		for (let key in nextData) {
+			const prevValue = prevData && prevData[key];
+			const nextValue = nextData[key];
+			patchData(el, key, prevValue, nextValue);
+		}
+	}
+	if (prevData) {
+		for (let key in prevData) {
+			const prevValue = prevData[key];
+			// 删除nextData中没有的key对应的属性
+			if (!nextData.hasOwnProperty(key)) {
+				patchData(el, key, prevValue, null);
+			}
+		}
+	}
+}
+
+function patchData(el, key, prevValue, nextValue) {
+	switch (key) {
+		case "style":
+			for (let k in nextValue) {
+				el.style[k] = nextValue[k];
+			}
+			for (let k in prevValue) {
+				if (!Object.prototype.hasOwnProperty.call(nextValue, k)) {
+					el.style[k] = "";
+				}
+			}
+			break;
+		case "class":
+			break;
 	}
 }
 
@@ -49,7 +133,7 @@ function mountPortal(vnode, container) {
 			break;
 	}
 
-	// TODO 搞清楚为什么要挂载一个占位节点到container
+	// TODO 为什么要挂载一个占位节点到container
 	const placeholder = createTextVNode("");
 	mount(placeholder, container);
 	vnode.el = placeholder;
