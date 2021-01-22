@@ -8,6 +8,8 @@ class MyComponent {
 			{
 				class: "box",
 				style: { background: "green" },
+				prop1: "a",
+				value: 2,
 			},
 			fragmentVNode,
 			"我是box"
@@ -33,6 +35,11 @@ let main = h(
 	{
 		style: { background: "red" },
 		class: "cls",
+		onclick: (e) => {
+			if (main.el) {
+				main.el.style.background = "blue";
+			}
+		},
 	},
 	[
 		h("span", null, "我是span1"),

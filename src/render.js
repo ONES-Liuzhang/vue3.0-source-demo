@@ -1,6 +1,6 @@
 import { VNodeFlags, ChildrenFlags } from "./flags.js";
 import { createTextVNode } from "./h.js";
-
+const domPropsRE = /\[A-Z]|^(?:value|checked|selected|muted)$/;
 export function render(vnode, container) {
 	let preVnode = container.vnode;
 	if (preVnode == null) {
@@ -93,7 +93,11 @@ function mountStatefulComponent(vnode, container) {
 	instance.$el = vnode.el = instance.$vnode.el;
 }
 
-function mountFunctionalComponent(vnode, container) {}
+function mountFunctionalComponent(vnode, container) {
+	const $vnode = vnode.tag();
+	mount($vnode, container);
+	vnode.el = $vnode.el;
+}
 
 // mount函数最终会收敛到mountElement
 function mountElement(vnode, container, isSVG) {
@@ -113,6 +117,15 @@ function mountElement(vnode, container, isSVG) {
 				addClass(el, cls);
 				break;
 			default:
+				if (key[0] === "o" && key[1] === "n") {
+					// 原生事件监听
+					const event = key.substring(2);
+					el.addEventListener(event, data[key]);
+				} else if (domPropsRE.test(key)) {
+					el[key] = data[key];
+				} else {
+					el.setAttribute(key, data[key]);
+				}
 				break;
 		}
 	}
