@@ -51,4 +51,6 @@ let main = h(
 
 render(main, document.getElementById("app"));
 
-render(h(MyComponent), document.getElementById("component-app"));
+setTimeout(() => {
+	render(h(MyComponent), document.getElementById("app"));
+}, 3000);

@@ -57,6 +57,7 @@ function patchElement(prevVnode, vnode, container) {
 	const prevData = prevVnode.data;
 	const nextData = vnode.data;
 
+	// 更新VNodeData
 	if (nextData) {
 		// 更新nextData中有的key对应的值
 		for (let key in nextData) {
@@ -73,6 +74,37 @@ function patchElement(prevVnode, vnode, container) {
 				patchData(el, key, prevValue, null);
 			}
 		}
+	}
+
+	// 更新children
+	const { children: prevChildren, childrenFlags: prevChildFlags } = prevVnode;
+	const { children: nextChildren, childrenFlags: nextChildFlags } = vnode;
+
+	patchChildren(prevChildFlags, prevChildren, nextChildFlags, nextChildren, el);
+}
+
+function patchChildren(
+	prevChildFlags,
+	prevChildren,
+	nextChildFlags,
+	nextChildren,
+	container
+) {
+	switch (prevChildFlags) {
+		case ChildrenFlags.NO_CHILDREN:
+			mountChildren(nextChildren, nextChildFlags, container);
+			break;
+		case ChildrenFlags.SINGLE_VNODE:
+			container.removeChild(prevChildren.el);
+			mountChildren(nextChildren, nextChildFlags, container);
+			break;
+		default:
+			// TODO diff算法
+			for (let i = 0; i < prevChildFlags.length; i++) {
+				container.removeChild(prevChildren[i].el);
+				mountChildren(nextChildren, nextChildFlags, container);
+			}
+			break;
 	}
 }
 
@@ -105,6 +137,20 @@ function mount(vnode, container, isSVG) {
 		mountComponent(vnode, container);
 	} else {
 		mountText(vnode, container);
+	}
+}
+
+function mountChildren(children, childrenFlags, container) {
+	switch (childrenFlags) {
+		case ChildrenFlags.NO_CHILDREN:
+			break;
+		case ChildrenFlags.SINGLE_VNODE:
+			mount(children, container);
+			break;
+		default:
+			for (let i = 0; i < children.length; i++) {
+				mount(children[i], container);
+			}
 	}
 }
 
