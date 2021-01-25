@@ -44,7 +44,11 @@ function patch(prevVNode, vnode, container) {
 }
 
 function replaceVNode(prevNode, vnode, container) {
-	container.removeChild(prevNode.el);
+	const el =
+		typeof container === "string"
+			? document.querySelector(container)
+			: container;
+	el.removeChild(prevNode.el);
 	mount(vnode, container);
 }
 
@@ -85,11 +89,7 @@ function patchElement(prevVNode, vnode, container) {
 
 function patchText(prevVNode, nextVNode, container) {
 	const el = (nextVNode.el = prevVNode.el);
-	// 两个都是文本节点时，更新文本节点
-	if (prevVNode.flags & nextVNode.flags) {
-		el.nodeValue = nextVNode.children;
-	} else {
-	}
+	el.nodeValue = nextVNode.children;
 }
 
 function patchFragment(prevVNode, nextVNode, container) {
@@ -152,21 +152,24 @@ function patchChildren(
 	nextChildren,
 	container
 ) {
+	const el =
+		typeof container === "string"
+			? document.querySelector(container)
+			: container;
 	switch (prevChildFlags) {
 		case ChildrenFlags.NO_CHILDREN:
-			mountChildren(nextChildren, nextChildFlags, container);
+			mountChildren(nextChildren, nextChildFlags, el);
 			break;
 		case ChildrenFlags.SINGLE_VNODE:
-			const el = prevChildren.el;
 			switch (nextChildFlags) {
 				case ChildrenFlags.NO_CHILDREN:
-					container.removeChild(el);
+					el.removeChild(prevChildren.el);
 					break;
 				case ChildrenFlags.SINGLE_VNODE:
 					patch(prevChildren, nextChildren, container);
 					break;
 				default:
-					container.removeChild(el);
+					el.removeChild(prevChildren.el);
 					for (let i = 0; i < nextChildren.length; i++) {
 						mount(nextChildren[i], container);
 					}
@@ -176,10 +179,9 @@ function patchChildren(
 		default:
 			// TODO diff算法
 			for (let i = 0; i < prevChildren.length; i++) {
-				const el = prevChildren[i].el;
-				container.removeChild(el);
+				el.removeChild(prevChildren[i].el);
 			}
-			mountChildren(nextChildren, nextChildFlags, container);
+			mountChildren(nextChildren, nextChildFlags, el);
 			break;
 	}
 }

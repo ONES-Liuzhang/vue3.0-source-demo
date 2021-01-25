@@ -64,7 +64,7 @@ const prevVNode = h(
 const nextVNode = h(
 	Portal,
 	{
-		target: "#portal-box",
+		target: "#app",
 	},
 	[h("p", null, "新片段子节点 1"), h("p", null, "新片段子节点 2")]
 );
