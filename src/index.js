@@ -52,16 +52,22 @@ let main = h(
 // render(main, document.getElementById("app"));
 
 // 旧的 VNode
-const prevVNode = h(Fragment, null, [
-	h("p", null, "旧片段子节点 1"),
-	h("p", null, "旧片段子节点 2"),
-]);
+const prevVNode = h(
+	Portal,
+	{
+		target: "#app",
+	},
+	[h("p", null, "旧片段子节点 1"), h("p", null, "旧片段子节点 2")]
+);
 
 // 新的 VNode
-const nextVNode = h(Fragment, null, [
-	h("p", null, "新片段子节点 1"),
-	h("p", null, "新片段子节点 2"),
-]);
+const nextVNode = h(
+	Portal,
+	{
+		target: "#portal-box",
+	},
+	[h("p", null, "新片段子节点 1"), h("p", null, "新片段子节点 2")]
+);
 
 render(prevVNode, document.getElementById("app"));
 

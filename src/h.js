@@ -6,6 +6,7 @@ export function h(tag, data = null, children = null) {
 	let flags = null;
 	if (tag === Portal) {
 		flags = VNodeFlags.PORTAL;
+		// portal的tag指向的是挂载的容器 对其他标签来说是container
 		tag = data && data.target;
 	} else if (tag === Fragment) {
 		flags = VNodeFlags.FRAGMENT;

@@ -112,6 +112,39 @@ function patchFragment(prevVNode, nextVNode, container) {
 	}
 }
 
+function patchPortal(prevVNode, nextVNode, container) {
+	const prevEl = prevVNode.tag;
+	const nextEl = nextVNode.tag;
+	if (prevEl == nextEl) {
+		patchChildren(
+			prevVNode.childrenFlags,
+			prevVNode.children,
+			nextVNode.childrenFlags,
+			nextVNode.children,
+			prevEl
+		);
+	} else {
+		const { children, childrenFlags, tag } = prevVNode;
+		let target = typeof tag === "string" ? document.querySelector(tag) : tag;
+		switch (childrenFlags) {
+			case ChildrenFlags.NO_CHILDREN:
+				break;
+			case ChildrenFlags.SINGLE_VNODE:
+				target.removeChild(children.el);
+				break;
+			default:
+				for (let i = 0; i < children.length; i++) {
+					target.removeChild(children[i].el);
+				}
+				break;
+		}
+		// 重新挂载
+		mount(nextVNode, container);
+	}
+	// portal的el是一个placeholder占位符，真实的挂载点是data.target
+	nextVNode.el = prevVNode.el;
+}
+
 function patchChildren(
 	prevChildFlags,
 	prevChildren,
