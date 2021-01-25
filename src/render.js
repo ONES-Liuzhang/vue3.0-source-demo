@@ -34,12 +34,12 @@ function patch(prevVnode, vnode, container) {
 		patchElement(prevVnode, vnode, container);
 	} else if (vnodeFlags & VNodeFlags.FRAGMENT) {
 		patchFragment(prevVnode, vnode, container);
-	} else if (flags & VNodeFlags.PORTAL) {
-		patchPortal(vnode, container);
-	} else if (flags & VNodeFlags.COMPONENT) {
-		patchComponent(vnode, container);
-	} else {
-		patchText(vnode, container);
+	} else if (vnodeFlags & VNodeFlags.PORTAL) {
+		patchPortal(prevVnode, vnode, container);
+	} else if (vnodeFlags & VNodeFlags.COMPONENT) {
+		patchComponent(prevVnode, vnode, container);
+	} else if (vnodeFlags & VNodeFlags.TEXT) {
+		patchText(prevVnode, vnode, container);
 	}
 }
 
@@ -83,6 +83,15 @@ function patchElement(prevVnode, vnode, container) {
 	patchChildren(prevChildFlags, prevChildren, nextChildFlags, nextChildren, el);
 }
 
+function patchText(prevVnode, nextVnode, container) {
+	const el = (nextVnode.el = prevVnode.el);
+	// 两个都是文本节点时，更新文本节点
+	if (prevVnode.flags & nextVnode.flags) {
+		el.nodeValue = nextVnode.children;
+	} else {
+	}
+}
+
 function patchChildren(
 	prevChildFlags,
 	prevChildren,
@@ -95,8 +104,7 @@ function patchChildren(
 			mountChildren(nextChildren, nextChildFlags, container);
 			break;
 		case ChildrenFlags.SINGLE_VNODE:
-			container.removeChild(prevChildren.el);
-			mountChildren(nextChildren, nextChildFlags, container);
+			patch(prevChildren, nextChildren, container);
 			break;
 		default:
 			// TODO diff算法
@@ -277,6 +285,7 @@ function mountElement(vnode, container, isSVG) {
 
 function mountText(vnode, container) {
 	const el = document.createTextNode(vnode.children);
+	vnode.el = el;
 	container.appendChild(el);
 }
 

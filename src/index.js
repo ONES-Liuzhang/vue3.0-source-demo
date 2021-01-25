@@ -49,8 +49,17 @@ let main = h(
 	]
 );
 
-render(main, document.getElementById("app"));
+// render(main, document.getElementById("app"));
 
+// 旧的 VNode
+const prevVNode = h("p", null, "旧文本");
+
+// 新的 VNode
+const nextVNode = h("p", null, "新文本");
+
+render(prevVNode, document.getElementById("app"));
+
+// 2秒后更新
 setTimeout(() => {
-	render(h(MyComponent), document.getElementById("app"));
-}, 3000);
+	render(nextVNode, document.getElementById("app"));
+}, 2000);
