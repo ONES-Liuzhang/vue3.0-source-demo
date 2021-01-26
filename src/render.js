@@ -1,5 +1,7 @@
 import { VNodeFlags, ChildrenFlags } from "./flags.js";
 import { createTextVNode } from "./h.js";
+import { patchData } from "./patchData.js";
+
 const domPropsRE = /\[A-Z]|^(?:value|checked|selected|muted)$/;
 
 export function render(vnode, container) {
@@ -186,23 +188,6 @@ function patchChildren(
 	}
 }
 
-function patchData(el, key, prevValue, nextValue) {
-	switch (key) {
-		case "style":
-			for (let k in nextValue) {
-				el.style[k] = nextValue[k];
-			}
-			for (let k in prevValue) {
-				if (!Object.prototype.hasOwnProperty.call(nextValue, k)) {
-					el.style[k] = "";
-				}
-			}
-			break;
-		case "class":
-			break;
-	}
-}
-
 function mount(vnode, container, isSVG) {
 	const { flags } = vnode;
 	if (flags & VNodeFlags.ELEMENT) {
@@ -296,9 +281,25 @@ function mountComponent(vnode, container) {
 
 function mountStatefulComponent(vnode, container) {
 	const instance = new vnode.tag();
-	instance.$vnode = instance.render();
-	mount(instance.$vnode, container);
-	instance.$el = vnode.el = instance.$vnode.el;
+	instance._update = () => {
+		if (instance._mounted) {
+			// 1.拿到旧的VNode
+			const prevVNode = instance.$vnode;
+			// 2.执行render拿到现在的VNode, 更新instance.$vnode
+			const nextVNode = (instance.$vnode = instance.render());
+			// 3.执行patch
+			patch(prevVNode, nextVNode, prevVNode.el.parentNode);
+		} else {
+			instance.$vnode = instance.render();
+			mount(instance.$vnode, container);
+			instance.$el = vnode.el = instance.$vnode.el;
+			// 	执行mounted
+			instance.mounted && instance.mounted();
+			instance._mounted = true;
+		}
+	};
+
+	instance._update();
 }
 
 function mountFunctionalComponent(vnode, container) {
