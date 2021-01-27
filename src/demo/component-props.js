@@ -14,6 +14,12 @@ class ChildComponent {
 // </div>
 class FatherComponent {
 	localText = "props text";
+	mounted() {
+		setTimeout(() => {
+			this.localText = "update text";
+			this._update();
+		}, 2000);
+	}
 	render() {
 		return h(ChildComponent, {
 			text: this.localText,

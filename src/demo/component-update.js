@@ -1,5 +1,5 @@
-import { h } from "./h.js";
-import { render } from "./render.js";
+import { h } from "../h.js";
+import { render } from "../render.js";
 
 const container = document.getElementById("container-update");
 
@@ -19,4 +19,4 @@ class MyComponent {
 	}
 }
 
-render(h(MyComponent), document.getElementById("app"));
+render(h(MyComponent), container);

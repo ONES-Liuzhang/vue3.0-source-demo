@@ -41,7 +41,7 @@ function patch(prevVNode, vnode, container) {
 	} else if (vnodeFlags & VNodeFlags.COMPONENT) {
 		patchComponent(prevVNode, vnode, container);
 	} else if (vnodeFlags & VNodeFlags.TEXT) {
-		patchText(prevVNode, vnode, container);
+		patchText(prevVNode, vnode);
 	}
 }
 
@@ -89,9 +89,11 @@ function patchElement(prevVNode, vnode, container) {
 	patchChildren(prevChildFlags, prevChildren, nextChildFlags, nextChildren, el);
 }
 
-function patchText(prevVNode, nextVNode, container) {
+function patchText(prevVNode, nextVNode) {
 	const el = (nextVNode.el = prevVNode.el);
-	el.nodeValue = nextVNode.children;
+	if (prevVNode.children !== nextVNode.children) {
+		el.nodeValue = nextVNode.children;
+	}
 }
 
 function patchFragment(prevVNode, nextVNode, container) {
@@ -145,6 +147,18 @@ function patchPortal(prevVNode, nextVNode, container) {
 	}
 	// portal的el是一个placeholder占位符，真实的挂载点是data.target
 	nextVNode.el = prevVNode.el;
+}
+
+// 同组件的更新(prevVNode.tag === nextVNode.tag)
+function patchComponent(prevVNode, nextVNode, container) {
+	// 有状态组件更新
+	if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+		const instance = (nextVNode.children = prevVNode.children);
+		// 更新$props
+		instance.$props = nextVNode.data;
+		// 调用update方法，更新$vnode
+		instance._update();
+	}
 }
 
 function patchChildren(
@@ -242,7 +256,8 @@ function mountPortal(vnode, container) {
 			break;
 	}
 
-	// TODO 为什么要挂载一个占位节点到container
+	// Q: 为什么要挂载一个占位节点到container
+	// A: 如果Portal更新的时候变成了别的节点，需要保存parentNode来挂载新的VNode
 	const placeholder = createTextVNode("");
 	mount(placeholder, container);
 	vnode.el = placeholder;
@@ -279,8 +294,15 @@ function mountComponent(vnode, container) {
 	}
 }
 
+// 挂载有状态组件
 function mountStatefulComponent(vnode, container) {
-	const instance = new vnode.tag();
+	// 组件data里的children会被当作slots
+	const instance = (vnode.children = new vnode.tag());
+	// TODO 处理data $props和$attrs，先简单把data赋值给instance.$props
+	instance.$props = vnode.data;
+	instance._vnode = vnode;
+
+	// 定义组件实例的更新函数
 	instance._update = () => {
 		if (instance._mounted) {
 			// 1.拿到旧的VNode
@@ -288,6 +310,8 @@ function mountStatefulComponent(vnode, container) {
 			// 2.执行render拿到现在的VNode, 更新instance.$vnode
 			const nextVNode = (instance.$vnode = instance.render());
 			// 3.执行patch
+			// Q: 为什么不直接使用container，而是拿pervVNode.el.parentNode
+			// Q: container和prevVNode.el.parentNode相等吗？如果不相等，什么情况下会不相等？
 			patch(prevVNode, nextVNode, prevVNode.el.parentNode);
 		} else {
 			instance.$vnode = instance.render();
