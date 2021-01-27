@@ -51,6 +51,11 @@ function replaceVNode(prevNode, vnode, container) {
 			? document.querySelector(container)
 			: container;
 	el.removeChild(prevNode.el);
+	if (prevNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+		// 注销组件
+		const instance = prevVNode.children;
+		instance.unmounted && instance.unmounted();
+	}
 	mount(vnode, container);
 }
 
@@ -151,13 +156,25 @@ function patchPortal(prevVNode, nextVNode, container) {
 
 // 同组件的更新(prevVNode.tag === nextVNode.tag)
 function patchComponent(prevVNode, nextVNode, container) {
+	if (prevVNode.tag !== nextVNode.tag) {
+		replaceVNode(prevVNode, nextVNode, container);
+	}
 	// 有状态组件更新
-	if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+	else if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
 		const instance = (nextVNode.children = prevVNode.children);
 		// 更新$props
 		instance.$props = nextVNode.data;
 		// 调用update方法，更新$vnode
 		instance._update();
+	}
+	// 函数式组件更新
+	else if (nextVNode.flags & VNodeFlags.COMPONENT_FUNCTIONAL) {
+		const handle = (nextVNode.handle = prevVNode.handle);
+		handle.prev = prevVNode;
+		handle.next = nextVNode;
+		handle.container = container;
+
+		handle._update();
 	}
 }
 
@@ -327,9 +344,28 @@ function mountStatefulComponent(vnode, container) {
 }
 
 function mountFunctionalComponent(vnode, container) {
-	const $vnode = vnode.tag();
-	mount($vnode, container);
-	vnode.el = $vnode.el;
+	vnode.handle = {
+		prev: null,
+		next: vnode,
+		container: container,
+		_update() {
+			const props = this.next.data;
+			if (this.prev) {
+				// update
+				const prevVNode = this.prev;
+				const nextVNode = this.next;
+				const prevTree = prevVNode.children;
+				const nextTree = (nextVNode.children = nextVNode.tag(props));
+				patch(prevTree, nextTree, container);
+				nextTree.el = prevTree.el;
+			} else {
+				const $vnode = (this.next.children = this.next.tag(props));
+				mount($vnode, this.container);
+				this.next.el = $vnode.el;
+			}
+		},
+	};
+	vnode.handle._update();
 }
 
 // mount函数最终会收敛到mountElement
