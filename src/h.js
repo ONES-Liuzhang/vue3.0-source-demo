@@ -78,13 +78,14 @@ function normalizedChildren(children) {
 	let newChildren = [];
 	for (let i = 0; i < children.length; i++) {
 		let child = children[i];
+		let data = child.data;
 		if (child._isVNode) {
-			if (child.key === null) {
-				child.key = "|" + i;
+			if (child.key == null) {
+				child.key = data && data.key != null ? data.key : "|" + i;
 			}
 		} else {
 			child = createTextVNode(child);
-			child.key = "|" + i;
+			child.key = data && data.key ? data.key != null : "|" + i;
 		}
 
 		newChildren.push(child);

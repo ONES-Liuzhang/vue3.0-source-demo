@@ -25,7 +25,7 @@ export function render(vnode, container) {
 	}
 }
 
-function patch(prevVNode, vnode, container) {
+function patch(prevVNode, vnode, container, refNode) {
 	const prevVNodeFlags = prevVNode.flags;
 	const vnodeFlags = vnode.flags;
 	if (!(prevVNodeFlags & vnodeFlags)) {
@@ -33,13 +33,13 @@ function patch(prevVNode, vnode, container) {
 		// 优化：如果chilren相同，可以裁枝
 		replaceVNode(prevVNode, vnode, container);
 	} else if (vnodeFlags & VNodeFlags.ELEMENT) {
-		patchElement(prevVNode, vnode, container);
+		patchElement(prevVNode, vnode, container, refNode);
 	} else if (vnodeFlags & VNodeFlags.FRAGMENT) {
 		patchFragment(prevVNode, vnode, container);
 	} else if (vnodeFlags & VNodeFlags.PORTAL) {
 		patchPortal(prevVNode, vnode, container);
 	} else if (vnodeFlags & VNodeFlags.COMPONENT) {
-		patchComponent(prevVNode, vnode, container);
+		patchComponent(prevVNode, vnode, container, refNode);
 	} else if (vnodeFlags & VNodeFlags.TEXT) {
 		patchText(prevVNode, vnode);
 	}
@@ -59,14 +59,14 @@ function replaceVNode(prevNode, vnode, container) {
 	mount(vnode, container);
 }
 
-function patchElement(prevVNode, vnode, container) {
-	if (prevVNode.tag !== vnode.tag) {
+function patchElement(prevVNode, nextVNode, container, refNode) {
+	if (prevVNode.tag !== nextVNode.tag) {
 		replaceVNode(prevVNode, vnode, container);
 		return;
 	}
-	const el = (vnode.el = prevVNode.el);
+	const el = (nextVNode.el = prevVNode.el);
 	const prevData = prevVNode.data;
-	const nextData = vnode.data;
+	const nextData = nextVNode.data;
 
 	// 更新VNodeData
 	if (nextData) {
@@ -87,9 +87,11 @@ function patchElement(prevVNode, vnode, container) {
 		}
 	}
 
+	container.insertBefore(el, refNode);
+
 	// 更新children
 	const { children: prevChildren, childrenFlags: prevChildFlags } = prevVNode;
-	const { children: nextChildren, childrenFlags: nextChildFlags } = vnode;
+	const { children: nextChildren, childrenFlags: nextChildFlags } = nextVNode;
 
 	patchChildren(prevChildFlags, prevChildren, nextChildFlags, nextChildren, el);
 }
@@ -211,18 +213,47 @@ function patchChildren(
 			break;
 		default:
 			// TODO diff算法
-			for (let i = 0; i < prevChildren.length; i++) {
-				el.removeChild(prevChildren[i].el);
+			let lastIndex = -1;
+			for (let i = 0; i < nextChildren.length; i++) {
+				let nextVNode = nextChildren[i];
+				let _isExist = false;
+				for (let j = 0; j < prevChildren.length; j++) {
+					let prevVNode = prevChildren[j];
+					if (prevVNode.key == nextVNode.key) {
+						_isExist = true;
+						nextVNode.el = prevVNode.el;
+						if (j < lastIndex) {
+							let refNode = nextChildren[i - 1].el.nextSibling;
+							// 更新VNodeData
+							patch(prevVNode, nextVNode, container, refNode);
+						} else {
+							lastIndex = j;
+						}
+					}
+				}
+				if (!_isExist) {
+					let refNode =
+						i > 0 ? nextChildren[i - 1].el.nextSibling : prevChildren[0].el;
+					mount(nextVNode, container, null, refNode);
+				}
 			}
-			mountChildren(nextChildren, nextChildFlags, el);
+			// 移除不存在的元素
+			for (let i = 0; i < prevChildren.length; i++) {
+				const prevVNode = prevChildren[i];
+
+				const has = nextChildren.find((item) => item.key == prevVNode.key);
+				if (!has) {
+					container.removeChild(prevVNode.el);
+				}
+			}
 			break;
 	}
 }
 
-function mount(vnode, container, isSVG) {
+function mount(vnode, container, isSVG, refNode) {
 	const { flags } = vnode;
 	if (flags & VNodeFlags.ELEMENT) {
-		mountElement(vnode, container, isSVG);
+		mountElement(vnode, container, isSVG, refNode);
 	} else if (flags & VNodeFlags.FRAGMENT) {
 		mountFragment(vnode, container);
 	} else if (flags & VNodeFlags.PORTAL) {
@@ -369,11 +400,12 @@ function mountFunctionalComponent(vnode, container) {
 }
 
 // mount函数最终会收敛到mountElement
-function mountElement(vnode, container, isSVG) {
+function mountElement(vnode, container, isSVG, refNode) {
 	const { tag, children, data, childrenFlags } = vnode;
 	isSVG = isSVG || tag === "svg";
 	let el = isSVG ? document.createElementNS(tag) : document.createElement(tag);
 
+	// 处理data
 	for (let key in data) {
 		switch (key) {
 			case "style":
@@ -399,6 +431,7 @@ function mountElement(vnode, container, isSVG) {
 		}
 	}
 
+	// 递归遍历children
 	if (childrenFlags !== ChildrenFlags.NO_CHILDREN) {
 		if (childrenFlags & ChildrenFlags.SINGLE_VNODE) {
 			mount(children, el, isSVG);
@@ -411,7 +444,7 @@ function mountElement(vnode, container, isSVG) {
 	}
 
 	vnode.el = el;
-	container.appendChild(el);
+	container.insertBefore(el, refNode);
 }
 
 function mountText(vnode, container) {
